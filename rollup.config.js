@@ -1,11 +1,9 @@
 import resolve from '@rollup/plugin-node-resolve'
 
 export default {
-    // input: './src/main.js',
-    // input: './src/loadxml.js',
-    input: './examples/three-urdf.js',
+    input: './src/URDFLoader.js',
     output:{
-        file:'./bundle.js',
+        file:'build/URDFLoader.js',
         format:'esm',
     },
     plugins:[
