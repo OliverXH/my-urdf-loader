@@ -15,8 +15,9 @@ import {
 
 import { URDFParser } from './URDFParser.js';
 
-import { FileLoader, Loader, Object3D, Group, Mesh, MeshPhongMaterial } from 'three';
+import { FileLoader, Loader, Object3D, Group, Mesh, MeshPhongMaterial, MeshStandardMaterial } from 'three';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
+import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 import { Ammo } from './ammo.js';
 
 const gUrdfDefaultCollisionMargin = 0.001;
@@ -65,6 +66,8 @@ class URDFLoader extends Loader {
 
                     onLoad(result);
 
+                    delete scope.urdfParser.model;
+
                 } else {
                     console.error('fail to load urdf file');
                 }
@@ -112,7 +115,6 @@ class URDFLoader extends Loader {
                     mesh.quaternion.set(rot.x(), rot.y(), rot.z(), rot.w());
 
                     model.add(mesh);
-                    console.log('a');
 
                 });
             });
@@ -235,6 +237,17 @@ class URDFLoader extends Loader {
 
                 case FILE_STL:  // stl
 
+                    console.log('loading...');
+                    new STLLoader().load(visual.m_sourceFileLocation, (geometry) => {
+
+                        geometry.rotateX(-Math.PI / 2);
+
+                        const material = new MeshStandardMaterial({ color: 0xffffff });
+                        const mesh = new Mesh(geometry, material);
+
+                        onload(mesh);
+
+                    });
                     break;
 
                 case FILE_OBJ:  // obj
@@ -305,11 +318,9 @@ class URDFLoader extends Loader {
 
         let scope = this;
 
-        console.log('loading...');
-
         let robot = new Group();
 
-        let model = this.urdfParser.model;
+        let model = scope.urdfParser.model;
         let links = model.m_links;
         links.forEach(linkPtr => {
 
@@ -320,16 +331,39 @@ class URDFLoader extends Loader {
                 let childTrans = vis.m_linkLocalFrame;
                 let matName = vis.m_materialName;
                 /* UrdfMaterial */ const mat = model.m_materials.find(m => m.m_name == matName);
+                let material;
+
+                if (mat) {
+                    material = new MeshPhongMaterial({
+                        color: mat.m_matColor.m_rgbColor,
+                        specular: mat.m_matColor.m_specularColor,
+                        opacity: mat.m_matColor.m_alpha,
+                        transparent: mat.m_matColor.m_alpha < 1
+                    });
+
+                    if (mat.m_textureFilename.length > 4) {
+                        const loader = new TextureLoader();
+                        const filePath = scope.m_sourceFile + mat.m_textureFilename;
+                        material.map = loader.load(filePath);
+                    }
+                }
 
                 scope.convertURDFToVisualShapeInternal(vis, (mesh) => {
 
-                    let pos = vis.m_linkLocalFrame.getOrigin();
-                    let rot = vis.m_linkLocalFrame.getRotation();
+                    let pos = childTrans.getOrigin();
+                    let rot = childTrans.getRotation();
 
                     mesh.position.set(pos.x(), pos.y(), pos.z());
                     mesh.quaternion.set(rot.x(), rot.y(), rot.z(), rot.w());
 
                     link.add(mesh);
+
+                    link.traverse(child => {
+                        if (child.isMesh) {
+                            child.material = material;
+                        }
+                    })
+
                 });
 
             });
