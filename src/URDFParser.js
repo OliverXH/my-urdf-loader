@@ -18,18 +18,25 @@ import { UrdfModel, UrdfGeometry, UrdfMaterial, UrdfJoint, UrdfLink, UrdfShape, 
 
 import { Utils } from './utils.js';
 
-
 class URDFParser {
 
     constructor(baseURL) {
 
-        // this.material = THREE.MeshPhongMaterial;
         this.m_urdf2Model = null;
 
         this.m_urdfScaling = 1;
+
         this.url = baseURL || '';
 
     }
+
+    // - getter/setter -
+
+    get model() {
+        return this.m_urdf2Model;
+    }
+
+    // - Parser -
 
     parseMaterial(material, config) {
 
@@ -38,22 +45,24 @@ class URDFParser {
             return false;
         }
 
-        material.name = config.getAttribute('name');
+        material.m_name = config.getAttribute('name');
 
         // texture
-        let t = firstChildElement(config, 'texture');
-        if (t) {
-            if (t.getAttribute('filename')) {
-                material.m_textureFilename = t.getAttribute("filename");
+        let t_xml = firstChildElement(config, 'texture');
+        if (t_xml) {
+            if (t_xml.getAttribute('filename')) {
+                material.m_textureFilename = t_xml.getAttribute("filename");
             }
         }
 
         // color
-        let c = firstChildElement(config, 'color');
-        if (c) {
-            if (c.getAttribute('rgba')) {
-                let rgba = c.getAttribute("rgba").split(/\s/g);
-                rgba.map(v => parseFloat(v));
+        let c_xml = firstChildElement(config, 'color');
+        if (c_xml) {
+            if (c_xml.getAttribute('rgba')) {
+
+                let rgba = c_xml.getAttribute('rgba')
+                    .split(/\s/g)
+                    .map(v => parseFloat(v));
 
                 if (rgba.length !== 4) {
                     console.warn(material.m_name + " has no rgba");
@@ -68,19 +77,20 @@ class URDFParser {
 
         {
             // specular (non-standard)
-            let s = firstChildElement(config, 'specular');
-            if (s) {
-                if (s.getAttribute('rgb')) {
+            let s_xml = firstChildElement(config, 'specular');
+            if (s_xml) {
+                if (s_xml.getAttribute('rgb')) {
 
-                    let rgb = s.getAttribute("rgb").split(/\s/g);
-                    rgb.map(v => parseFloat(v));
+                    let rgb = s_xml.getAttribute("rgb")
+                        .split(/\s/g)
+                        .map(v => parseFloat(v));
 
-                    if (rgba.length !== 3) {
-                        console.warn(material.m_name + " has no rgba");
-                        rgba = [0.5, 0.5, 0.5];
+                    if (rgb.length !== 3) {
+                        console.warn(material.m_name + " has no rgb");
+                        rgb = [0.5, 0.5, 0.5];
                     }
 
-                    material.m_matColor.m_specularColor.setRGB(rgba[0], rgba[1], rgba[3]);
+                    material.m_matColor.m_specularColor.setRGB(rgb[0], rgb[1], rgb[3]);
 
                 }
             }
@@ -419,33 +429,35 @@ class URDFParser {
         visual.m_geometry.m_hasLocalMaterial = false;
 
         // Material
-        let mat = firstChildElement(config, 'material');
-        if (mat) {
+        let mat_xml = firstChildElement(config, 'material');
+        if (mat_xml) {
 
             // get material name
-            if (!mat.getAttribute('name')) {
+            if (!mat_xml.getAttribute('name')) {
                 console.error('Visual material must contain a name attribute');
                 return false;
             }
-            visual.m_materialName = mat.getAttribute('name');
+            visual.m_materialName = mat_xml.getAttribute('name');
 
             // try to parse material element in place
 
-            let t = firstChildElement(mat, 'texture');
-            let c = firstChildElement(mat, 'color');
-            let s = firstChildElement(mat, 'specular');
+            let t = firstChildElement(mat_xml, 'texture');
+            let c = firstChildElement(mat_xml, 'color');
+            let s = firstChildElement(mat_xml, 'specular');
 
             if (t || c || s) {
-                if (this.parseMaterial(visual.m_geometry.m_localMaterial, mat)) {
+                if (this.parseMaterial(visual.m_geometry.m_localMaterial, mat_xml)) {
 
-                    let _mat = new UrdfMaterial(visual.m_geometry.m_localMaterial);
-                    let preMat = model.m_materials[_mat.m_name];
+                    let geom_mat = visual.m_geometry.m_localMaterial;
+
+                    let preMat = model.m_materials.find(mat => mat.m_name == geom_mat.m_name);
 
                     if (preMat) {
-                        model.m_materials[_mat.m_name] = null;
+                        let i = model.m_materials.indexOf(preMat);
+                        model.m_materials.splice(i, 1);
                     }
 
-                    model.m_materials[_mat.m_name] = _mat;
+                    model.m_materials.push(geom_mat);
                     visual.m_geometry.m_hasLocalMaterial = true;
 
                 }
