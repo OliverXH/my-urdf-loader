@@ -15,10 +15,13 @@ class UrdfModel {
         this.m_materials = [];
         this.m_links = [];
         this.m_joints = [];
+        this.m_deformable = null;   // deformable 可变形的
+
+        this.m_userData = null; // []
 
         this.m_rootLinks = [];
+        this.m_overrideFixedBase = false;
 
-        this.m_deformable = null
     }
 }
 
@@ -94,7 +97,7 @@ class UrdfLink {
         this.m_name = '';
         this.m_inertia = new UrdfInertia();
         this.m_linkTransformInWorld = new Ammo.btTransform();
-        
+
         this.m_visualArray = [];
         this.m_collisionArray = [];
 
