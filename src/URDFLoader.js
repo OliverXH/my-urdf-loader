@@ -376,6 +376,62 @@ class URDFLoader extends Loader {
 
     }
 
+    convertLinkCollisionShapes(localInertiaFrame) {
+
+        let scope = this;
+
+        let compoundShape = new Ammo.btCompoundShape();
+        compoundShape.setMargin(gUrdfDefaultCollisionMargin);
+
+        let links = scope.urdfParser.model.m_links;
+        links.forEach(linkPtr => {
+
+            link.m_collisionArray.forEach(col => {
+
+                let childShape = scope.convertURDFToCollisionShape(col);
+                if (childShape) {
+
+                    let childTrans = col.m_linkLocalFrame;
+                    let worldInertiaFrame = localInertiaFrame.inverse() * childTrans;
+                    compoundShape.addChildShape(worldInertiaFrame, childShape);
+
+                }
+
+            })
+
+        });
+
+        return compoundShape;
+    }
+
+    getMassAndInertia2(link, mass) {
+
+        let inertialFrame = new Ammo.btTransform();
+        inertialFrame.setIdentity();
+
+        let linkMass;
+        if (link) {
+            if (!link.m_parentJoint && this.urdfParser.model.m_overrideFixedBase) {
+                linkMass = 0;
+            }
+            else {
+                linkMass = link.m_inertia.m_mass;
+            }
+            mass = linkMass;
+            // localInertiaDiagonal.setValue(0, 0, 0);
+            inertialFrame.setOrigin(lin.m_inertia.m_linkLocalFrame.getOrigin());
+            inertialFrame.setBasis(lin.m_inertia.m_linkLocalFrame.getBasis());
+            // inertialFrame.setRotation(lin.m_inertia.m_linkLocalFrame.getRotation());
+        }
+        else {
+            mass = 1;
+            // localInertiaDiagonal.setValue(1, 1, 1);
+            inertialFrame.setIdentity();
+        }
+
+        return inertialFrame;
+    }
+
 }
 
 export { URDFLoader };
