@@ -70,7 +70,7 @@ class URDFParser {
                 }
 
                 material.m_matColor.m_alpha = rgba[3];
-                material.m_matColor.m_rgbColor.setRGB(rgba[0], rgba[1], rgba[3]);
+                material.m_matColor.m_rgbColor.setRGB(rgba[0], rgba[1], rgba[2]);
 
             }
         }
@@ -456,8 +456,8 @@ class URDFParser {
                         let i = model.m_materials.indexOf(preMat);
                         model.m_materials.splice(i, 1);
                     }
-
                     model.m_materials.push(geom_mat);
+
                     visual.m_geometry.m_hasLocalMaterial = true;
 
                 }
